@@ -1,0 +1,101 @@
+USE data_cleaning_demo;
+
+DROP TABLE IF EXISTS clean_customer_orders;
+
+CREATE TABLE clean_customer_orders AS
+SELECT
+    NULLIF(NULLIF(NULLIF(TRIM(customer_id), ''), 'NA'), 'null') AS customer_id,
+    NULLIF(NULLIF(NULLIF(TRIM(order_id), ''), 'NA'), 'null') AS order_id,
+    NULLIF(NULLIF(NULLIF(TRIM(customer_name), ''), 'NA'), 'null') AS customer_name,
+    NULLIF(NULLIF(NULLIF(TRIM(email), ''), 'NA'), 'null') AS email,
+    NULLIF(NULLIF(NULLIF(TRIM(phone), ''), 'NA'), 'null') AS phone,
+
+    CASE
+        WHEN order_date REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+            THEN STR_TO_DATE(order_date, '%Y-%m-%d')
+        WHEN order_date REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
+            THEN STR_TO_DATE(order_date, '%d/%m/%Y')
+        WHEN order_date REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4}$'
+            THEN STR_TO_DATE(order_date, '%m-%d-%Y')
+        WHEN order_date REGEXP '^[A-Za-z]{3} [0-9]{2}, [0-9]{4}$'
+            THEN STR_TO_DATE(order_date, '%b %d, %Y')
+        ELSE NULL
+    END AS order_date,
+
+    CASE
+        WHEN ship_date REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+            THEN STR_TO_DATE(ship_date, '%Y-%m-%d')
+        WHEN ship_date REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
+            THEN STR_TO_DATE(ship_date, '%d/%m/%Y')
+        WHEN ship_date REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4}$'
+            THEN STR_TO_DATE(ship_date, '%m-%d-%Y')
+        WHEN ship_date REGEXP '^[A-Za-z]{3} [0-9]{2}, [0-9]{4}$'
+            THEN STR_TO_DATE(ship_date, '%b %d, %Y')
+        ELSE NULL
+    END AS ship_date,
+
+    NULLIF(NULLIF(NULLIF(TRIM(city), ''), 'NA'), 'null') AS city,
+    NULLIF(NULLIF(NULLIF(TRIM(state), ''), 'NA'), 'null') AS state,
+    NULLIF(NULLIF(NULLIF(TRIM(postal_code), ''), 'NA'), 'null') AS postal_code,
+    NULLIF(NULLIF(NULLIF(TRIM(product), ''), 'NA'), 'null') AS product,
+
+    CASE
+        WHEN TRIM(quantity) REGEXP '^[0-9]+$'
+            THEN CAST(quantity AS UNSIGNED)
+        ELSE NULL
+    END AS quantity,
+
+    CASE
+        WHEN REPLACE(REPLACE(TRIM(unit_price), '$', ''), ',', '')
+             REGEXP '^[0-9]+(\\.[0-9]+)?$'
+            THEN CAST(
+                REPLACE(REPLACE(TRIM(unit_price), '$', ''), ',', '')
+                AS DECIMAL(10,2)
+            )
+        ELSE NULL
+    END AS unit_price,
+
+    CASE
+        WHEN TRIM(discount_pct) REGEXP '^[0-9]+(\\.[0-9]+)?$'
+            THEN CAST(discount_pct AS DECIMAL(5,2))
+        ELSE NULL
+    END AS discount_pct,
+
+    CASE
+        WHEN REPLACE(REPLACE(TRIM(total_amount), '$', ''), ',', '')
+             REGEXP '^[0-9]+(\\.[0-9]+)?$'
+            THEN CAST(
+                REPLACE(REPLACE(TRIM(total_amount), '$', ''), ',', '')
+                AS DECIMAL(12,2)
+            )
+        ELSE NULL
+    END AS total_amount,
+
+    LOWER(NULLIF(NULLIF(TRIM(payment_method), 'NA'), 'null')) AS payment_method,
+    LOWER(NULLIF(NULLIF(TRIM(order_status), 'NA'), 'null')) AS order_status,
+
+    CASE
+        WHEN LOWER(TRIM(is_returning_customer)) IN ('yes', 'y', 'true', '1')
+            THEN 1
+        WHEN LOWER(TRIM(is_returning_customer)) IN ('no', 'n', 'false', '0')
+            THEN 0
+        ELSE NULL
+    END AS is_returning_customer,
+
+    CASE
+        WHEN TRIM(customer_rating) REGEXP '^[0-9]+(\\.[0-9]+)?$'
+             AND CAST(customer_rating AS DECIMAL(3,1)) BETWEEN 1 AND 5
+            THEN CAST(customer_rating AS DECIMAL(3,1))
+        ELSE NULL
+    END AS customer_rating,
+
+    CASE
+        WHEN TRIM(delivery_days) REGEXP '^[0-9]+$'
+            THEN CAST(delivery_days AS UNSIGNED)
+        ELSE NULL
+    END AS delivery_days,
+
+    LOWER(NULLIF(NULLIF(TRIM(sales_channel), 'NA'), 'null')) AS sales_channel,
+    NULLIF(NULLIF(NULLIF(TRIM(notes), ''), 'NA'), 'null') AS notes
+
+FROM messy_customer_orders;
